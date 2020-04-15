@@ -3,6 +3,30 @@
 **Author**: Volha Charnysh
 **Version**: 1.0.0 
 
+**Number and name of feature: 1. Repository Set Up**
+Estimate of time needed to complete: 30 min
+Start time: 9.30 am
+Finish time: 10.00 am
+Actual time needed to complete: 30 min
+
+**Number and name of feature: 2. Locations**
+Estimate of time needed to complete: 3h
+Start time: 10.00 am
+Finish time: 1 pm
+Actual time needed to complete: 3h
+
+**Number and name of feature: 3. Weather**
+Estimate of time needed to complete: 1h
+Start time: 8 pm
+Finish time: 9 pm
+Actual time needed to complete: 1h
+
+**Number and name of feature: 4. Errors**
+Estimate of time needed to complete: 1 h
+Start time: 9 pm
+Finish time: 11 pm
+Actual time needed to complete: 2 h
+
 ## Overview
 heroku: https://damp-badlands-25566.herokuapp.com
 github: https://github.com/charnysho/city_explorer_api
