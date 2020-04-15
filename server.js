@@ -5,40 +5,60 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 const cors = require('cors');
 app.use(cors());
 
-
-function Location(geo, searchQuery) {
+function Location(data, searchQuery) {
   this.search_query = searchQuery;
-  this.formatted_query = geo.display_name;
-  this.latitude = geo.lat;
-  this.longitude = geo.lon;
+  this.formatted_query = data.display_name;
+  this.latitude = data.lat;
+  this.longitude = data.lon;
 }
 
-function parseSearchQuery(searchQuery) {
-  let locations = require('./data/geo.json');
-  let filterValue = searchQuery.filter_value;
+function Forecast(date, forecast) {
+  this.forecast = forecast;
+  this.time = new Date(date).toDateString();
+}
 
+function handleLocation(request, response) {
+  let location;
+  let locations = require('./data/location.json');
+  let filterValue = request.query.city;
   for (const i in locations) {
-    const location = locations[i];
-    console.log(location.display_name, filterValue);
-    if (location.display_name.includes(filterValue)) {
-      return new Location(location, filterValue);
+    if (locations[i].display_name.toLowerCase().includes(filterValue.toLowerCase())) {
+      location = new Location(locations[i], filterValue);
     }
   }
-}
-
-app.get('/location', (request, response) => {
-  let location = parseSearchQuery(request.query);
-  if (location) {
+  console.log(location);
+  if(typeof location !== 'undefined') {
     response.status(200).send(location);
   } else {
-    response.status(404).send('Cant find your city');
+    throw new Error('BROKEN');
   }
-});
+}
+
+function handleWeather(request, response) {
+  let weatherData = require('./data/weather.json').data;
+  const results = [];
+  weatherData.forEach(item => {
+    results.push(new Forecast(item.datetime, item.weather.description));
+  });
+  response.send(results);
+}
+
+function errorHandler(error, request, response, next) {
+  response.status(500).send({
+    status: 500,
+    responseText: 'Sorry, something went wrong',
+  });
+}
+
+app.get('/location', handleLocation);
+app.get('/weather', handleWeather);
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log('Server is running on PORT: ' + PORT);
 });
+
