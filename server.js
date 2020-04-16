@@ -2,7 +2,9 @@
 
 require('dotenv').config();
 
+const pg = require('pg');
 const express = require('express');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const cors = require('cors');
@@ -49,7 +51,25 @@ function formatConditionTime(date) {
 }
 
 function handleLocation(request, response) {
+
   let filterValue = request.query.city;
+  let searchSqlQuery = `SELECT formatted_query as display_name, latitude as lat, longitude as lon FROM locations WHERE search_query=$1`;
+
+  dbClient.query(searchSqlQuery, [filterValue])
+    .then(record => {
+      if(record.rows.length > 0) {
+        console.log('FOUND in DB');
+        response.send(new Location(record.rows[0], filterValue));
+      } else {
+        returnlocationFromGeocodeApi(request, response, filterValue);
+      }
+    })
+    .catch(error => {
+      errorHandler(error, request, response);
+    });
+}
+
+function returnlocationFromGeocodeApi(request, response, filterValue) {
   const key = process.env.GEOCODE_API_KEY;
   const url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${filterValue}&format=json&limit=1`;
   superagent.get(url)
@@ -58,6 +78,11 @@ function handleLocation(request, response) {
       data.map( item => {
         if(item.display_name.search(filterValue)) {
           const location = new Location(item, filterValue);
+          console.log('FOUND in API');
+
+          let insertSql = `INSERT INTO locations (search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING *`;
+          dbClient.query(insertSql, [location.search_query, location.formatted_query, location.latitude, location.longitude]);
+
           response.send(location);
         }
       });
@@ -112,7 +137,14 @@ app.get('/weather', handleWeather);
 app.get('/trails', handleTrails);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log('Server is running on PORT: ' + PORT);
-});
+const dbClient = new pg.Client(process.env.DATABASE_URL);
 
+dbClient.connect(err => {
+  if (err) {
+    console.log('ERROR: ' + err);
+  } else {
+    app.listen(PORT, () => {
+      console.log('Server is running on PORT: ' + PORT);
+    });
+  }
+});
