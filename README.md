@@ -53,6 +53,24 @@ Start time: 12 pm
 Finish time: 1 pm
 Actual time needed to complete: 1 h
 
+**9. Database**
+Estimate of time needed to complete: 1 h
+Start time: 9.30am
+Finish time: 10.00am
+Actual time needed to complete: 30 m
+
+**10. Server**
+Estimate of time needed to complete: 3h
+Start time: 10.00 am
+Finish time: 12.20 pm
+Actual time needed to complete: 2.20 h
+
+**11. Deploy**
+Estimate of time needed to complete: 15m
+Start time: 12.20 pm
+Finish time: 12.35 pm
+Actual time needed to complete: 15m
+
 ## Overview
 heroku: https://damp-badlands-25566.herokuapp.com
 github: https://github.com/charnysho/city_explorer_api
