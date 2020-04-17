@@ -4,11 +4,12 @@ require('dotenv').config();
 
 const pg = require('pg');
 const express = require('express');
-
-const app = express();
-const PORT = process.env.PORT || 3000;
 const cors = require('cors');
 const superagent = require('superagent');
+const iso1A2Code = require('@ideditor/country-coder').iso1A2Code;
+
+const PORT = process.env.PORT || 3000;
+const app = express();
 app.use(cors());
 
 function Location(data, searchQuery) {
@@ -18,35 +19,53 @@ function Location(data, searchQuery) {
   this.longitude = data.lon;
 }
 
-function Forecast(date, forecast) {
+function Forecast(data, forecast) {
   this.forecast = forecast;
-  this.time = new Date(date).toDateString();
+  this.time = new Date(data).toDateString();
 }
 
-function Trail(date) {
-  this.name = date.name;
-  this.location = date.location;
-  this.length = date.length;
-  this.stars = date.stars;
-  this.star_votes = date.starVotes;
-  this.summary = date.summary;
-  this.trail_url = date.url;
-  this.conditions = date.conditionDetails;
-  this.condition_date = formatConditionDate(new Date(date.conditionDate));
-  this.condition_time = formatConditionTime(new Date(date.conditionDate));
+function Trail(data) {
+  this.name = data.name;
+  this.location = data.location;
+  this.length = data.length;
+  this.stars = data.stars;
+  this.star_votes = data.starVotes;
+  this.summary = data.summary;
+  this.trail_url = data.url;
+  this.conditions = data.conditionDetails;
+  this.condition_date = formatConditionDate(new Date(data.conditionDate));
+  this.condition_time = formatConditionTime(new Date(data.conditionDate));
 }
 
-function formatConditionDate(date) {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+function Movie(data) {
+  this.title = data.title;
+  this.overview = data.overview;
+  this.average_votes = data.vote_average;
+  this.total_votes = data.vote_count;
+  this.image_url = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
+  this.popularity = data.popularity;
+  this.released_on = data.release_date;
+}
+
+function Restaurants(data) {
+  this.name = data.name;
+  this.image_url = data.image_url;
+  this.price = data.price;
+  this.rating = data.rating;
+  this.url = data.url;
+}
+
+function formatConditionDate(data) {
+  const year = data.getFullYear();
+  const month = data.getMonth() + 1;
+  const day = data.getDate();
   return `${year}-${month}-${day}`;
 }
 
-function formatConditionTime(date) {
-  const hours = date.getHours();
-  const min = date.getMinutes();
-  const sec = date.getSeconds();
+function formatConditionTime(data) {
+  const hours = data.getHours();
+  const min = data.getMinutes();
+  const sec = data.getSeconds();
   return `${hours}:${min}:${sec}`;
 }
 
@@ -124,6 +143,51 @@ function handleTrails(request, response) {
     });
 }
 
+function handleMovies(request, response) {
+  const { latitude, longitude } = request.query;
+  const region = iso1A2Code([longitude, latitude]);
+  const key = process.env.MOVIE_API_KEY;
+  const url = `https://api.themoviedb.org/3/movie/top_rated/?api_key=${key}&region=${region}`;
+  superagent.get(url)
+    .then(moviesResponse => {
+      const data = moviesResponse.body.results;
+      const results = [];
+      let numberOfMovies = 0;
+      while (numberOfMovies !== 20) {
+        results.push(new Movie(data[numberOfMovies]));
+        numberOfMovies = numberOfMovies + 1;
+      }
+      response.send(results);
+    })
+    .catch( error => {
+      errorHandler(error, request, response);
+    });
+}
+
+function handleRestaurants(request, response) {
+  const { latitude, longitude } = request.query;
+  const key = process.env.YELP_API_KEY;
+  const url =
+  `https://api.yelp.com/v3/businesses/search?&term=restaurants&latitude=${latitude}&longitude=${longitude}`;
+  superagent.get(url)
+    .set('Authorization', `Bearer ${key}`)
+    .then(moviesResponse => {
+      const data = moviesResponse.body.businesses;
+      console.log('RESULT');
+      console.log(data);
+      const results = [];
+      let numberOfRest = 0;
+      while (numberOfRest !== 20) {
+        results.push(new Restaurants(data[numberOfRest]));
+        numberOfRest = numberOfRest + 1;
+      }
+      response.send(results);
+    })
+    .catch( error => {
+      errorHandler(error, request, response);
+    });
+}
+
 function errorHandler(error, request, response, next) {
   console.log(error);
   response.status(500).send({
@@ -135,6 +199,8 @@ function errorHandler(error, request, response, next) {
 app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
 app.get('/trails', handleTrails);
+app.get('/movies', handleMovies);
+app.get('/yelp', handleRestaurants);
 app.use(errorHandler);
 
 const dbClient = new pg.Client(process.env.DATABASE_URL);
